@@ -15,14 +15,17 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.codepath.hansel.R;
+import com.codepath.hansel.activities.MainActivity;
 import com.codepath.hansel.models.Mapper;
 import com.codepath.hansel.models.Pebble;
 import com.codepath.hansel.models.User;
@@ -67,6 +70,7 @@ public class MapFragment extends Fragment implements
         LocationListener {
 
     private Date earliestDate;
+    private Pebble pebble;
     private Date seekDate;
     private SupportMapFragment mapFragment;
     private SeekBar sbMapRelativeTime;
@@ -99,9 +103,19 @@ public class MapFragment extends Fragment implements
         polylines = new ArrayList<>();
         dbHelper = DatabaseHelper.getInstance(getContext());
         mapper = Mapper.getInstance();
-
+        adjustInitialTime();
         buildPebbleMarker();
         fetchData();
+    }
+
+    private void adjustInitialTime() {
+        Bundle bundle = this.getArguments();
+        if(bundle != null) {
+            pebble = bundle.getParcelable("pebble");
+            if (pebble != null) {
+                seekDate = pebble.getDate();
+            }
+        }
     }
 
     private void buildPebbleMarker() {
@@ -114,6 +128,7 @@ public class MapFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_map, container, false);
+
         sbMapRelativeTime = (SeekBar) view.findViewById(R.id.sbMapRelativeTime);
         sbMapRelativeTime.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -150,8 +165,12 @@ public class MapFragment extends Fragment implements
             }
         });
         tvMapRelativeTime = (TextView) view.findViewById(R.id.tvMapRelativeTime);
+
         mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
         GoogleMap googleMap = mapFragment.getMap();
+        googleMap.setMyLocationEnabled(true);
+        googleMap.getUiSettings().setZoomControlsEnabled(true);
+
         googleMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
             private final View mWindow = getActivity().getLayoutInflater().inflate(R.layout.custom_info_window, null);
             private final View mContents = getActivity().getLayoutInflater().inflate(R.layout.custom_info_contents, null);
@@ -191,15 +210,70 @@ public class MapFragment extends Fragment implements
                 tvTimestamp.setText(pebble.getRelativeTimeAgo());
             }
         });
+
+        if(pebble != null){
+            RelativeLayout rlMapControlContainer = (RelativeLayout) view.findViewById(R.id.rlMapControlContainer);
+            rlMapControlContainer.setVisibility(View.GONE);
+        }else{
+            googleMap.setPadding(20, 20, 20, 80);
+        }
+
         reloadMap();
         return view;
     }
+
+    @Override
+    public void onPrepareOptionsMenu(Menu menu) {
+        if(pebble != null){
+            menu.findItem(R.id.refresh).setVisible(false);
+            ((MainActivity) getActivity()).getDrawerToggle().setDrawerIndicatorEnabled(false);
+            ((MainActivity) getActivity()).getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
+        super.onPrepareOptionsMenu(menu);
+    }
+
+//    @Override
+//    public void onResume() {
+//
+//        super.onResume();
+//
+//        getView().setFocusableInTouchMode(true);
+//        getView().requestFocus();
+//        getView().setOnKeyListener(new View.OnKeyListener() {
+//            @Override
+//            public boolean onKey(View v, int keyCode, KeyEvent event) {
+//                Log.e("gif--","fragment back key is clicked");
+//                if (event.getAction() == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_BACK) {
+//                    Log.e("gif--","fragment back key is clicked");
+//                    // handle back button
+//                    Toast.makeText(getActivity(), "LALALALALALA", Toast.LENGTH_SHORT).show();
+//                    return true;
+//
+//                }
+//
+//                return false;
+//            }
+//        });
+//    }
+//
+//    public void onBackPressed() {
+//
+//        Log.d("testtest","123123");
+//
+//    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.d("OptionsMenu", "option 1 selected from frag 1");
         switch (item.getItemId()) {
             case R.id.refresh:
+                seekDate = null;
+                sbMapRelativeTime.setProgress(100);
+                fetchData();
+                reloadMap();
+                return true;
+            case android.R.id.home:
                 seekDate = null;
                 sbMapRelativeTime.setProgress(100);
                 fetchData();
@@ -287,7 +361,6 @@ public class MapFragment extends Fragment implements
 
             // Map is ready
             Toast.makeText(getActivity(), "Map Fragment was loaded properly!", Toast.LENGTH_SHORT).show();
-            map.setMyLocationEnabled(true);
 
             // Now that map has loaded, let's get our location!
             mGoogleApiClient = new GoogleApiClient.Builder(getActivity())

@@ -1,6 +1,8 @@
 package com.codepath.hansel.models;
 
 import android.database.Cursor;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import com.codepath.hansel.utils.DatabaseHelper;
 import com.codepath.hansel.utils.TimeHelper;
@@ -14,7 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @ParseClassName("Pebble")
-public class Pebble extends ParseObject {
+public class Pebble extends ParseObject implements Parcelable {
     final DecimalFormat decimalFormat = new DecimalFormat("#.###");
     private int id;
     private User user;
@@ -136,4 +138,41 @@ public class Pebble extends ParseObject {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(this.id);
+        dest.writeLong(date != null ? date.getTime() : -1);
+        dest.writeDouble(this.latitude);
+        dest.writeDouble(this.longitude);
+        dest.writeParcelable(this.latLng, 0);
+        dest.writeString(this.timestamp);
+        dest.writeString(this.status);
+    }
+
+    protected Pebble(Parcel in) {
+        this.id = in.readInt();
+        long tmpDate = in.readLong();
+        this.date = tmpDate == -1 ? null : new Date(tmpDate);
+        this.latitude = in.readDouble();
+        this.longitude = in.readDouble();
+        this.latLng = in.readParcelable(LatLng.class.getClassLoader());
+        this.timestamp = in.readString();
+        this.status = in.readString();
+    }
+
+    public static final Parcelable.Creator<Pebble> CREATOR = new Parcelable.Creator<Pebble>() {
+        public Pebble createFromParcel(Parcel source) {
+            return new Pebble(source);
+        }
+
+        public Pebble[] newArray(int size) {
+            return new Pebble[size];
+        }
+    };
 }

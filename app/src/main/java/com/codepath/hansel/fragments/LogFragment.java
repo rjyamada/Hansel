@@ -4,11 +4,13 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.codepath.hansel.R;
@@ -18,7 +20,7 @@ import com.codepath.hansel.utils.DatabaseHelper;
 
 import java.util.ArrayList;
 
-public abstract class LogFragment extends Fragment {
+public abstract class LogFragment extends Fragment  {
     protected SwipeRefreshLayout swipeContainer;
     protected DatabaseHelper dbHelper;
     protected LogAdapter aPebbles;
@@ -59,6 +61,21 @@ public abstract class LogFragment extends Fragment {
 
     public void setupViews(View view) {
         lvPebbles = (ListView) view.findViewById(R.id.lvPebbles);
+        lvPebbles.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Bundle bundle = new Bundle();
+                Pebble pebble = aPebbles.getItem(position);
+                bundle.putParcelable("pebble", pebble);
+
+                Fragment mapFragment = new MapFragment();
+                mapFragment.setArguments(bundle);
+                FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
+                transaction.replace(R.id.flContent, mapFragment);
+                transaction.addToBackStack(null);
+                transaction.commit();
+            }
+        });
         lvPebbles.setAdapter(aPebbles);
 
         swipeContainer = (SwipeRefreshLayout) view.findViewById(R.id.swipeContainer);
